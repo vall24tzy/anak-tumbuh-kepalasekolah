@@ -2,25 +2,32 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #232852;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-urbanist);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Primary = biru identitas ANAKTUMBUH.ID */
+  --color-primary-50: #eef5ff;
+  --color-primary-100: #eaf2ff;
+  --color-primary-200: #a4c1fd;
+  --color-primary-300: #7fa6f4;
+  --color-primary-400: #5a8aec;
+  --color-primary-500: #3a72e3;
+  --color-primary-600: #3268d4;
+  --color-primary-700: #2a58b0;
+  --color-primary-800: #21458a;
+  --color-primary-900: #232852;
+
+  /* Secondary = kuning aksen ANAKTUMBUH.ID */
+  --color-secondary-100: #fdf3da;
+  --color-secondary-500: #eeb541;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
