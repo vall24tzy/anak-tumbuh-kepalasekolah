@@ -5,9 +5,7 @@ import { NAV_ITEMS } from "@/lib/constants/navigation";
 
 function Breadcrumb() {
   const pathname = usePathname();
-  const activeItem = NAV_ITEMS.find(
-    (item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
-  );
+  const activeItem = NAV_ITEMS.find((item) => pathname === item.href);
 
   return (
     <p className="text-xs font-bold text-primary-900/45">

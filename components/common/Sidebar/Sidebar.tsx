@@ -50,9 +50,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="mt-6 flex-1 space-y-1.5 px-3">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}

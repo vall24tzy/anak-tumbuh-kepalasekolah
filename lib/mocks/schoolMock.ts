@@ -1,0 +1,76 @@
+import { SchoolStructureResponse } from "@/lib/types/schoolType";
+
+export const mockSchoolStructure: SchoolStructureResponse = {
+  code: 200,
+  status: "success",
+  message: "OK (data dummy)",
+  data: {
+    school: {
+      id: 1,
+      uuid: "mock-school-1",
+      name: "SDN Anak Tumbuh 01",
+      address: "Jl. Merdeka No. 10, Bandung",
+      status: "active",
+    },
+    academic_years: [
+      {
+        id: 1,
+        uuid: "mock-year-2026",
+        name: "2026/2027",
+        start_date: "2026-07-01",
+        end_date: "2027-06-30",
+        status: "active",
+      },
+      {
+        id: 2,
+        uuid: "mock-year-2027",
+        name: "2027/2028",
+        start_date: "2027-07-01",
+        end_date: "2028-06-30",
+        status: "inactive",
+      },
+    ],
+    class_groups: [
+      {
+        id: 1,
+        uuid: "mock-class-1",
+        academic_year_id: 1,
+        education_level: "Kelas 5",
+        name: "Cendekia",
+        homeroom_teacher_id: 1,
+        homeroom_teacher_name: "Siti Nurhaliza, S.Pd",
+        total_students: 26,
+      },
+      {
+        id: 2,
+        uuid: "mock-class-2",
+        academic_year_id: 1,
+        education_level: "Kelas 8",
+        name: "B",
+        homeroom_teacher_id: 2,
+        homeroom_teacher_name: "Rina Lestari, S.Pd",
+        total_students: 24,
+      },
+      {
+        id: 3,
+        uuid: "mock-class-3",
+        academic_year_id: 2,
+        education_level: "Kelas 6",
+        name: "Cendekia",
+        homeroom_teacher_id: null,
+        homeroom_teacher_name: null,
+        total_students: 0,
+      },
+      {
+        id: 4,
+        uuid: "mock-class-4",
+        academic_year_id: 2,
+        education_level: "Kelas 9",
+        name: "B",
+        homeroom_teacher_id: null,
+        homeroom_teacher_name: null,
+        total_students: 0,
+      },
+    ],
+  },
+};
