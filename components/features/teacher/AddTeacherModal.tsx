@@ -17,6 +17,7 @@ type AddTeacherModalProps = {
 
 function AddTeacherModal({ onClose }: AddTeacherModalProps) {
   const [name, setName] = useState("");
+  const [nip, setNip] = useState("");
   const [classGroupId, setClassGroupId] = useState("");
 
   const { structure } = useSchoolStructure();
@@ -28,7 +29,7 @@ function AddTeacherModal({ onClose }: AddTeacherModalProps) {
     dispatch(resetAddTeacherStatus());
 
     const result = await dispatch(
-      addTeacher({ name, class_group_id: classGroupId ? Number(classGroupId) : null })
+      addTeacher({ name, nip, class_group_id: classGroupId ? Number(classGroupId) : null })
     );
 
     if (addTeacher.fulfilled.match(result) && result.payload.code === 200) {
@@ -39,7 +40,7 @@ function AddTeacherModal({ onClose }: AddTeacherModalProps) {
   return (
     <BaseModal
       title="Tambah Guru"
-      subtitle="Username dan password akan digenerate otomatis oleh sistem."
+      subtitle="Username dan password akan menggunakan NIP / ID guru yang kamu masukkan."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -51,6 +52,17 @@ function AddTeacherModal({ onClose }: AddTeacherModalProps) {
           required
           value={name}
           onChange={(event) => setName(event.target.value)}
+        />
+
+        <TextInput
+          label="NIP / ID Guru"
+          name="nip"
+          type="text"
+          inputMode="numeric"
+          placeholder="Masukkan NIP / ID guru"
+          required
+          value={nip}
+          onChange={(event) => setNip(event.target.value)}
         />
 
         <SelectInput

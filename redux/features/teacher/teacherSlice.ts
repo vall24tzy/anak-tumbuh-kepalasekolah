@@ -1,5 +1,5 @@
-import { getTeachersApi, addTeacherApi, validateTeacherImportApi, commitTeacherImportApi } from "@/lib/api/teacherApi";
-import { Teacher, AddTeacherPayload } from "@/lib/types/teacherType";
+import { getTeachersApi, addTeacherApi, updateTeacherApi, deleteTeacherApi, validateTeacherImportApi, commitTeacherImportApi } from "@/lib/api/teacherApi";
+import { Teacher, AddTeacherPayload, UpdateTeacherPayload } from "@/lib/types/teacherType";
 import { ValidatedTeacherImportRow } from "@/lib/types/teacherImportType";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
@@ -12,6 +12,8 @@ interface TeacherState {
 
   addLoading: boolean;
   addError: string | null;
+  mutationLoading: boolean;
+  mutationError: string | null;
 
   importStep: TeacherImportStep;
   importLoading: boolean;
@@ -29,6 +31,8 @@ const initialState: TeacherState = {
 
   addLoading: false,
   addError: null,
+  mutationLoading: false,
+  mutationError: null,
 
   importStep: "idle",
   importLoading: false,
@@ -47,6 +51,15 @@ export const fetchTeachers = createAsyncThunk("teacher/fetchList", async () => {
 export const addTeacher = createAsyncThunk("teacher/add", async (payload: AddTeacherPayload) => {
   const response = await addTeacherApi(payload);
   return response;
+});
+
+export const updateTeacher = createAsyncThunk("teacher/update", async (payload: UpdateTeacherPayload) => {
+  return await updateTeacherApi(payload);
+});
+
+export const deleteTeacher = createAsyncThunk("teacher/delete", async (id: number) => {
+  const response = await deleteTeacherApi(id);
+  return { ...response, id };
 });
 
 export const validateTeacherImport = createAsyncThunk(
@@ -71,6 +84,9 @@ const teacherSlice = createSlice({
   reducers: {
     resetAddTeacherStatus: (state) => {
       state.addError = null;
+    },
+    resetTeacherMutationStatus: (state) => {
+      state.mutationError = null;
     },
     resetTeacherImportWizard: (state) => {
       state.importStep = "idle";
@@ -118,6 +134,45 @@ const teacherSlice = createSlice({
         state.addError = action.error.message || "Gagal menambahkan guru";
       })
 
+      // Edit Guru
+      .addCase(updateTeacher.pending, (state) => {
+        state.mutationLoading = true;
+        state.mutationError = null;
+      })
+      .addCase(updateTeacher.fulfilled, (state, action) => {
+        state.mutationLoading = false;
+        if (action.payload.code === 200 && action.payload.data) {
+          const index = state.teachers.findIndex((teacher) => teacher.id === action.payload.data!.id);
+          if (index !== -1) {
+            state.teachers[index] = { ...state.teachers[index], ...action.payload.data };
+          }
+        } else {
+          state.mutationError = action.payload.message || "Gagal memperbarui guru";
+        }
+      })
+      .addCase(updateTeacher.rejected, (state, action) => {
+        state.mutationLoading = false;
+        state.mutationError = action.error.message || "Gagal memperbarui guru";
+      })
+
+      // Hapus Guru
+      .addCase(deleteTeacher.pending, (state) => {
+        state.mutationLoading = true;
+        state.mutationError = null;
+      })
+      .addCase(deleteTeacher.fulfilled, (state, action) => {
+        state.mutationLoading = false;
+        if (action.payload.code === 200) {
+          state.teachers = state.teachers.filter((teacher) => teacher.id !== action.payload.id);
+        } else {
+          state.mutationError = action.payload.message || "Gagal menghapus guru";
+        }
+      })
+      .addCase(deleteTeacher.rejected, (state, action) => {
+        state.mutationLoading = false;
+        state.mutationError = action.error.message || "Gagal menghapus guru";
+      })
+
       // Validasi import
       .addCase(validateTeacherImport.pending, (state) => {
         state.importLoading = true;
@@ -160,5 +215,5 @@ const teacherSlice = createSlice({
   },
 });
 
-export const { resetAddTeacherStatus, resetTeacherImportWizard } = teacherSlice.actions;
+export const { resetAddTeacherStatus, resetTeacherMutationStatus, resetTeacherImportWizard } = teacherSlice.actions;
 export default teacherSlice.reducer;

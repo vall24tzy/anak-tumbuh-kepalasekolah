@@ -6,10 +6,11 @@ import { CiUser, CiRedo, CiImport, CiCirclePlus } from "react-icons/ci";
 import { AppDispatch } from "@/redux/store";
 import useTeachers from "@/hook/useTeachers";
 import useSearchFilter from "@/hook/useSearchFilter";
-import { fetchTeachers } from "@/redux/features/teacher/teacherSlice";
+import { deleteTeacher, fetchTeachers } from "@/redux/features/teacher/teacherSlice";
 import { Teacher } from "@/lib/types/teacherType";
 import SearchInput from "@/components/ui/Search/SearchInput";
 import TeacherTable from "@/components/features/teacher/TeacherTable";
+import EditTeacherModal from "@/components/features/teacher/EditTeacherModal";
 import AddTeacherModal from "@/components/features/teacher/AddTeacherModal";
 import ImportTeacherWizard from "@/components/features/teacher/ImportTeacherWizard";
 import SpinLoader from "@/components/ui/Loader/SpinLoader";
@@ -17,13 +18,14 @@ import ErrorAlert from "@/components/ui/Alert/ErrorAlert";
 
 const getTeacherSearchText = (teacher: Teacher) => [
   teacher.name,
-  teacher.username,
+  teacher.nip,
   teacher.class_group_name ?? "",
 ];
 
 function TeacherManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   const { teachers, loading, error } = useTeachers();
@@ -31,6 +33,12 @@ function TeacherManagement() {
     teachers,
     getTeacherSearchText
   );
+
+  const handleDelete = async (teacher: Teacher) => {
+    const confirmed = window.confirm(`Hapus guru ${teacher.name}? Data akun guru ini akan dihapus.`);
+    if (!confirmed) return;
+    await dispatch(deleteTeacher(teacher.id));
+  };
 
   return (
     <div className="space-y-6">
@@ -79,7 +87,7 @@ function TeacherManagement() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput
-          placeholder="Cari nama, username, atau rombel..."
+          placeholder="Cari nama, NIP / ID, atau rombel..."
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -95,11 +103,12 @@ function TeacherManagement() {
           <SpinLoader size={48} />
         </div>
       ) : (
-        <TeacherTable teachers={filteredTeachers} />
+        <TeacherTable teachers={filteredTeachers} onEdit={setEditingTeacher} onDelete={handleDelete} />
       )}
 
       {isAddOpen && <AddTeacherModal onClose={() => setIsAddOpen(false)} />}
       {isImportOpen && <ImportTeacherWizard onClose={() => setIsImportOpen(false)} />}
+      {editingTeacher && <EditTeacherModal teacher={editingTeacher} onClose={() => setEditingTeacher(null)} />}
     </div>
   );
 }
