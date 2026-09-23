@@ -1,6 +1,6 @@
 import { User } from "@/lib/types/userType";
 
-// Payload untuk login Kepala Sekolah (Headmaster) via Username & Password
+// Payload login Kepala Sekolah: username berisi NIP, password berisi NIP.
 export type LoginPayload = {
   username: string;
   password: string;

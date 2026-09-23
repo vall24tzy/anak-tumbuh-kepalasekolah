@@ -2,7 +2,8 @@ import { AuthApiResponse, LoginPayload } from "@/lib/types/authType";
 import { isMockEnabled, mockDelay } from "@/lib/utils/mock";
 import { mockLoginResponse } from "@/lib/mocks/authMock";
 
-// Login Kepala Sekolah (Headmaster) menggunakan Username/Email & Password
+// Login Kepala Sekolah: username diisi NIP dan password menggunakan NIP yang sama.
+// Backend tetap menerima field "username" agar kontrak API tidak berubah.
 export const loginApi = async (payload: LoginPayload): Promise<AuthApiResponse> => {
   if (isMockEnabled()) {
     await mockDelay();
