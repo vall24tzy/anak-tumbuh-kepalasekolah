@@ -3,12 +3,17 @@
 import { FormEvent, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
-import { addClassGroup, updateClassGroup } from "@/redux/features/school/schoolSlice";
+import {
+  addClassGroup,
+  clearSaveFeedback,
+  updateClassGroup,
+} from "@/redux/features/school/schoolSlice";
 import { AcademicYear, ClassGroup } from "@/lib/types/schoolType";
 import useTeachers from "@/hook/useTeachers";
 import TextInput from "@/components/ui/Input/TextInput";
 import SelectInput from "@/components/ui/Input/SelectInput";
 import PrimaryButton from "@/components/ui/Button/PrimaryButton";
+import ErrorAlert from "@/components/ui/Alert/ErrorAlert";
 import BaseModal from "@/components/ui/Modal/BaseModal";
 
 type AddClassGroupModalProps = {
@@ -25,12 +30,12 @@ function AddClassGroupModal({
   classGroup,
 }: AddClassGroupModalProps) {
   const isEditMode = Boolean(classGroup);
-  const activeYear = academicYears.find((year) => year.status === "active") ?? academicYears[0];
+  const activeYear = academicYears.find((year) => year.is_active) ?? academicYears[0];
 
   const [academicYearId, setAcademicYearId] = useState(
     classGroup ? String(classGroup.academic_year_id) : activeYear ? String(activeYear.id) : ""
   );
-  const [educationLevel, setEducationLevel] = useState(classGroup?.education_level ?? "");
+  const [gradeLevel, setGradeLevel] = useState(classGroup ? String(classGroup.grade_level) : "");
   const [name, setName] = useState(classGroup?.name ?? "");
   const [homeroomTeacherId, setHomeroomTeacherId] = useState(
     classGroup?.homeroom_teacher_id ? String(classGroup.homeroom_teacher_id) : ""
@@ -38,25 +43,32 @@ function AddClassGroupModal({
 
   const { teachers } = useTeachers();
   const dispatch = useDispatch<AppDispatch>();
-  const { saving } = useSelector((state: RootState) => state.school);
+  const { saving, saveError } = useSelector((state: RootState) => state.school);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    dispatch(clearSaveFeedback());
+
     const payload = {
       academic_year_id: Number(academicYearId),
-      education_level: educationLevel,
-      name,
+      grade_level: Number(gradeLevel),
+      name: name.trim(),
       homeroom_teacher_id: homeroomTeacherId ? Number(homeroomTeacherId) : null,
     };
 
     const result = classGroup
-      ? await dispatch(updateClassGroup({ ...payload, id: classGroup.id }))
+      ? await dispatch(
+          updateClassGroup({
+            ...payload,
+            id: classGroup.id,
+            current_assignment_id: classGroup.assignment_id,
+            current_teacher_id: classGroup.homeroom_teacher_id,
+          })
+        )
       : await dispatch(addClassGroup(payload));
 
     const thunk = classGroup ? updateClassGroup : addClassGroup;
-    if (thunk.fulfilled.match(result) && result.payload.code === 200) {
-      onClose();
-    }
+    if (thunk.fulfilled.match(result)) onClose();
   };
 
   return (
@@ -73,25 +85,29 @@ function AddClassGroupModal({
           value={academicYearId}
           onChange={(event) => setAcademicYearId(event.target.value)}
           options={academicYears.map((year) => ({
-            label: `${year.name}${year.status === "active" ? " — aktif" : ""}`,
+            label: `${year.name}${year.is_active ? " — aktif" : ""}`,
             value: String(year.id),
           }))}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <TextInput
-            label="Nama Tingkat"
-            name="education_level"
-            type="text"
-            placeholder="Contoh: Kelas 5 / TK A1"
+            label="Tingkat (angka)"
+            name="grade_level"
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            placeholder="Contoh: 5"
             required
-            value={educationLevel}
-            onChange={(event) => setEducationLevel(event.target.value)}
+            value={gradeLevel}
+            onChange={(event) => setGradeLevel(event.target.value)}
           />
           <TextInput
             label="Nama Rombel"
             name="name"
             type="text"
+            maxLength={30}
             placeholder="Contoh: Cendekia / A"
             required
             value={name}
@@ -100,7 +116,7 @@ function AddClassGroupModal({
         </div>
 
         <SelectInput
-          label="Wali Kelas (Skeleton)"
+          label="Wali Kelas"
           name="homeroom_teacher_id"
           value={homeroomTeacherId}
           onChange={(event) => setHomeroomTeacherId(event.target.value)}
@@ -109,14 +125,18 @@ function AddClassGroupModal({
             ...teachers
               .filter(
                 (teacher) =>
-                  !teacher.class_group_name || teacher.id === classGroup?.homeroom_teacher_id
+                  teacher.status === "active" &&
+                  (!teacher.class_group_id || teacher.id === classGroup?.homeroom_teacher_id)
               )
               .map((teacher) => ({ label: teacher.name, value: String(teacher.id) })),
           ]}
         />
         <p className="-mt-2 text-xs font-semibold text-primary-900/45">
-          Constraint satu Wali Kelas/satu rombel aktif tetap ditegakkan backend.
+          Hanya guru aktif yang belum menjadi wali kelas yang ditampilkan. Satu guru hanya boleh
+          mengampu satu rombel aktif.
         </p>
+
+        {saveError && <ErrorAlert message={saveError} />}
 
         <PrimaryButton isLoading={saving}>
           {isEditMode ? "Simpan Perubahan" : "Simpan Rombel"}

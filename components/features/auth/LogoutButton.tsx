@@ -5,13 +5,15 @@ import { useDispatch } from "react-redux";
 import { CiLogout } from "react-icons/ci";
 import { AppDispatch } from "@/redux/store";
 import { resetAuth } from "@/redux/features/auth/authSlice";
+import { logoutApi } from "@/lib/api/authApi";
 
 function LogoutButton() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
+  const handleLogout = async () => {
+    // Cabut token di server (best-effort) dan hapus token lokal.
+    await logoutApi();
     dispatch(resetAuth());
     router.push("/");
   };

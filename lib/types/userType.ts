@@ -1,13 +1,16 @@
 import { UserRole } from "@/lib/constants/role";
 
+export type UserSchool = {
+  id: number;
+  name: string;
+};
+
+// Bentuk GET /auth/me untuk Kepala Sekolah (juga dipakai sebagai user di Redux).
+// Login hanya mengembalikan id, role, name; sisanya diambil dari /auth/me.
 export type User = {
   id: number;
-  uuid: string;
-  name: string;
-  username: string;
-  email: string | null;
   role: UserRole;
-  school_id: number | null;
-  avatar_url: string | null;
-  is_active: number;
+  name: string | null;
+  nip: string | null;
+  school: UserSchool | null;
 };

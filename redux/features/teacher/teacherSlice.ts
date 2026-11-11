@@ -1,27 +1,30 @@
-import { getTeachersApi, addTeacherApi, updateTeacherApi, deleteTeacherApi, validateTeacherImportApi, commitTeacherImportApi } from "@/lib/api/teacherApi";
-import { Teacher, AddTeacherPayload, UpdateTeacherPayload } from "@/lib/types/teacherType";
-import { ValidatedTeacherImportRow } from "@/lib/types/teacherImportType";
+import {
+  addTeacherApi,
+  getTeachersApi,
+  importTeachersApi,
+  inactiveTeacherApi,
+  resetTeacherPasswordApi,
+  updateTeacherApi,
+} from "@/lib/api/teacherApi";
+import { ApiResult } from "@/lib/types/apiType";
+import { MutationOutcome } from "@/lib/types/mutationType";
+import { TeacherImportResult } from "@/lib/types/teacherImportType";
+import { AddTeacherPayload, Teacher, UpdateTeacherPayload } from "@/lib/types/teacherType";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-
-export type TeacherImportStep = "idle" | "preview" | "done";
 
 interface TeacherState {
   teachers: Teacher[];
   loading: boolean;
   error: string | null;
 
-  addLoading: boolean;
-  addError: string | null;
-  mutationLoading: boolean;
-  mutationError: string | null;
+  saving: boolean;
+  saveMessage: string | null;
+  saveWarning: string | null;
+  saveError: string | null;
 
-  importStep: TeacherImportStep;
   importLoading: boolean;
   importError: string | null;
-  importRows: ValidatedTeacherImportRow[];
-  importValidCount: number;
-  importInvalidCount: number;
-  importedCount: number;
+  importResult: TeacherImportResult | null;
 }
 
 const initialState: TeacherState = {
@@ -29,191 +32,125 @@ const initialState: TeacherState = {
   loading: false,
   error: null,
 
-  addLoading: false,
-  addError: null,
-  mutationLoading: false,
-  mutationError: null,
+  saving: false,
+  saveMessage: null,
+  saveWarning: null,
+  saveError: null,
 
-  importStep: "idle",
   importLoading: false,
   importError: null,
-  importRows: [],
-  importValidCount: 0,
-  importInvalidCount: 0,
-  importedCount: 0,
+  importResult: null,
 };
 
-export const fetchTeachers = createAsyncThunk("teacher/fetchList", async () => {
-  const response = await getTeachersApi();
-  return response;
-});
-
-export const addTeacher = createAsyncThunk("teacher/add", async (payload: AddTeacherPayload) => {
-  const response = await addTeacherApi(payload);
-  return response;
-});
-
-export const updateTeacher = createAsyncThunk("teacher/update", async (payload: UpdateTeacherPayload) => {
-  return await updateTeacherApi(payload);
-});
-
-export const deleteTeacher = createAsyncThunk("teacher/delete", async (id: number) => {
-  const response = await deleteTeacherApi(id);
-  return { ...response, id };
-});
-
-export const validateTeacherImport = createAsyncThunk(
-  "teacher/validateImport",
-  async (file: File) => {
-    const response = await validateTeacherImportApi(file);
-    return response;
+// Daftar tidak menampilkan loader layar penuh bila sudah ada data (supaya
+// modal yang terbuka tidak ikut hilang saat daftar dimuat ulang).
+export const fetchTeachers = createAsyncThunk<Teacher[], void, { rejectValue: string }>(
+  "teacher/fetchList",
+  async (_, { rejectWithValue }) => {
+    const result = await getTeachersApi();
+    if (!result.ok) return rejectWithValue(result.error.message);
+    return result.data;
   }
 );
 
-export const commitTeacherImport = createAsyncThunk(
-  "teacher/commitImport",
-  async (rows: ValidatedTeacherImportRow[]) => {
-    const response = await commitTeacherImportApi(rows);
-    return response;
+const createMutation = <Arg>(
+  type: string,
+  call: (arg: Arg) => Promise<ApiResult<MutationOutcome>>
+) =>
+  createAsyncThunk<MutationOutcome, Arg, { rejectValue: string }>(
+    `teacher/${type}`,
+    async (arg, { dispatch, rejectWithValue }) => {
+      const result = await call(arg);
+      if (!result.ok) return rejectWithValue(result.error.message);
+      await dispatch(fetchTeachers());
+      return result.data;
+    }
+  );
+
+export const addTeacher = createMutation<AddTeacherPayload>("add", addTeacherApi);
+export const updateTeacher = createMutation<UpdateTeacherPayload>("update", updateTeacherApi);
+export const inactiveTeacher = createMutation<number>("inactive", inactiveTeacherApi);
+export const resetTeacherPassword = createMutation<{ id: number; newPassword: string }>(
+  "resetPassword",
+  ({ id, newPassword }) => resetTeacherPasswordApi(id, newPassword)
+);
+
+// Import satu langkah: file langsung diproses backend.
+export const importTeachers = createAsyncThunk<TeacherImportResult, File, { rejectValue: string }>(
+  "teacher/import",
+  async (file, { dispatch, rejectWithValue }) => {
+    const result = await importTeachersApi(file);
+    if (!result.ok) return rejectWithValue(result.error.message);
+    await dispatch(fetchTeachers());
+    return result.data;
   }
 );
+
+const mutations = [addTeacher, updateTeacher, inactiveTeacher, resetTeacherPassword];
 
 const teacherSlice = createSlice({
   name: "teacher",
   initialState,
   reducers: {
-    resetAddTeacherStatus: (state) => {
-      state.addError = null;
-    },
-    resetTeacherMutationStatus: (state) => {
-      state.mutationError = null;
+    clearSaveFeedback: (state) => {
+      state.saveMessage = null;
+      state.saveWarning = null;
+      state.saveError = null;
     },
     resetTeacherImportWizard: (state) => {
-      state.importStep = "idle";
+      state.importLoading = false;
       state.importError = null;
-      state.importRows = [];
-      state.importValidCount = 0;
-      state.importInvalidCount = 0;
-      state.importedCount = 0;
+      state.importResult = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchTeachers.pending, (state) => {
-        state.loading = true;
+        state.loading = state.teachers.length === 0;
         state.error = null;
       })
       .addCase(fetchTeachers.fulfilled, (state, action) => {
         state.loading = false;
-        if (action.payload.code === 200 && action.payload.data) {
-          state.teachers = action.payload.data;
-        } else {
-          state.error = action.payload.message || "Gagal memuat daftar wali kelas";
-        }
+        state.teachers = action.payload;
       })
       .addCase(fetchTeachers.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || "Gagal memuat daftar wali kelas";
+        state.error = action.payload ?? action.error.message ?? "Gagal memuat daftar guru";
       })
 
-      // Tambah Guru
-      .addCase(addTeacher.pending, (state) => {
-        state.addLoading = true;
-        state.addError = null;
-      })
-      .addCase(addTeacher.fulfilled, (state, action) => {
-        state.addLoading = false;
-        if (action.payload.code === 200 && action.payload.data) {
-          state.teachers = [...state.teachers, action.payload.data];
-        } else {
-          state.addError = action.payload.message || "Gagal menambahkan guru";
-        }
-      })
-      .addCase(addTeacher.rejected, (state, action) => {
-        state.addLoading = false;
-        state.addError = action.error.message || "Gagal menambahkan guru";
-      })
-
-      // Edit Guru
-      .addCase(updateTeacher.pending, (state) => {
-        state.mutationLoading = true;
-        state.mutationError = null;
-      })
-      .addCase(updateTeacher.fulfilled, (state, action) => {
-        state.mutationLoading = false;
-        if (action.payload.code === 200 && action.payload.data) {
-          const index = state.teachers.findIndex((teacher) => teacher.id === action.payload.data!.id);
-          if (index !== -1) {
-            state.teachers[index] = { ...state.teachers[index], ...action.payload.data };
-          }
-        } else {
-          state.mutationError = action.payload.message || "Gagal memperbarui guru";
-        }
-      })
-      .addCase(updateTeacher.rejected, (state, action) => {
-        state.mutationLoading = false;
-        state.mutationError = action.error.message || "Gagal memperbarui guru";
-      })
-
-      // Hapus Guru
-      .addCase(deleteTeacher.pending, (state) => {
-        state.mutationLoading = true;
-        state.mutationError = null;
-      })
-      .addCase(deleteTeacher.fulfilled, (state, action) => {
-        state.mutationLoading = false;
-        if (action.payload.code === 200) {
-          state.teachers = state.teachers.filter((teacher) => teacher.id !== action.payload.id);
-        } else {
-          state.mutationError = action.payload.message || "Gagal menghapus guru";
-        }
-      })
-      .addCase(deleteTeacher.rejected, (state, action) => {
-        state.mutationLoading = false;
-        state.mutationError = action.error.message || "Gagal menghapus guru";
-      })
-
-      // Validasi import
-      .addCase(validateTeacherImport.pending, (state) => {
+      .addCase(importTeachers.pending, (state) => {
         state.importLoading = true;
         state.importError = null;
       })
-      .addCase(validateTeacherImport.fulfilled, (state, action) => {
+      .addCase(importTeachers.fulfilled, (state, action) => {
         state.importLoading = false;
-        if (action.payload.code === 200 && action.payload.data) {
-          state.importRows = action.payload.data.rows;
-          state.importValidCount = action.payload.data.valid_count;
-          state.importInvalidCount = action.payload.data.invalid_count;
-          state.importStep = "preview";
-        } else {
-          state.importError = action.payload.message || "File gagal divalidasi";
-        }
+        state.importResult = action.payload;
       })
-      .addCase(validateTeacherImport.rejected, (state, action) => {
+      .addCase(importTeachers.rejected, (state, action) => {
         state.importLoading = false;
-        state.importError = action.error.message || "File gagal divalidasi";
-      })
-
-      // Commit import
-      .addCase(commitTeacherImport.pending, (state) => {
-        state.importLoading = true;
-        state.importError = null;
-      })
-      .addCase(commitTeacherImport.fulfilled, (state, action) => {
-        state.importLoading = false;
-        if (action.payload.code === 200 && action.payload.data) {
-          state.importedCount = action.payload.data.imported_count;
-          state.importStep = "done";
-        } else {
-          state.importError = action.payload.message || "Import gagal dikomit";
-        }
-      })
-      .addCase(commitTeacherImport.rejected, (state, action) => {
-        state.importLoading = false;
-        state.importError = action.error.message || "Import gagal dikomit";
+        state.importError = action.payload ?? action.error.message ?? "Import gagal diproses";
       });
+
+    mutations.forEach((mutation) => {
+      builder
+        .addCase(mutation.pending, (state) => {
+          state.saving = true;
+          state.saveMessage = null;
+          state.saveWarning = null;
+          state.saveError = null;
+        })
+        .addCase(mutation.fulfilled, (state, action) => {
+          state.saving = false;
+          state.saveMessage = action.payload.message;
+          state.saveWarning = action.payload.warning;
+        })
+        .addCase(mutation.rejected, (state, action) => {
+          state.saving = false;
+          state.saveError = action.payload ?? action.error.message ?? "Gagal menyimpan perubahan";
+        });
+    });
   },
 });
 
-export const { resetAddTeacherStatus, resetTeacherMutationStatus, resetTeacherImportWizard } = teacherSlice.actions;
+export const { clearSaveFeedback, resetTeacherImportWizard } = teacherSlice.actions;
 export default teacherSlice.reducer;

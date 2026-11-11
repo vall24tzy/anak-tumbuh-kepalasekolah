@@ -8,6 +8,8 @@ import { AppDispatch } from "@/redux/store";
 import { login, clearAuthMessage } from "@/redux/features/auth/authSlice";
 import { HEADMASTER_DASHBOARD_PATH } from "@/lib/constants/role";
 import useAuth from "@/hook/useAuth";
+import useCooldown from "@/hook/useCooldown";
+import { RATE_LIMIT_MESSAGE } from "@/lib/api/client";
 import TextInput from "@/components/ui/Input/TextInput";
 import PasswordInput from "@/components/ui/Input/PasswordInput";
 import PrimaryButton from "@/components/ui/Button/PrimaryButton";
@@ -23,6 +25,7 @@ function LoginForm() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { loading } = useAuth();
+  const { remaining, start: startCooldown } = useCooldown();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -32,22 +35,15 @@ function LoginForm() {
     const result = await dispatch(login({ username: nip.trim(), password }));
 
     if (login.fulfilled.match(result)) {
-      const { code, data, message, access_token } = result.payload;
-
-      if (code === 200 && data) {
-        localStorage.setItem("access_token", access_token);
-        setShowSuccess(true);
-        setTimeout(() => {
-          router.push(HEADMASTER_DASHBOARD_PATH);
-        }, 1200);
-        return;
-      }
-
-      setFormError(message || "Username atau password salah.");
+      setShowSuccess(true);
+      setTimeout(() => {
+        router.push(HEADMASTER_DASHBOARD_PATH);
+      }, 1200);
       return;
     }
 
-    setFormError("Gagal melakukan login, silakan coba lagi.");
+    if (result.payload === RATE_LIMIT_MESSAGE) startCooldown();
+    setFormError(result.payload ?? "Gagal melakukan login, silakan coba lagi.");
   };
 
   return (
@@ -80,7 +76,9 @@ function LoginForm() {
 
       {formError && <ErrorAlert message={formError} onClose={() => setFormError(null)} />}
 
-      <PrimaryButton isLoading={loading}>Masuk ke Dashboard</PrimaryButton>
+      <PrimaryButton isLoading={loading} disabled={remaining > 0}>
+        {remaining > 0 ? `Coba lagi dalam ${remaining} detik` : "Masuk ke Dashboard"}
+      </PrimaryButton>
 
       {showSuccess && <SuccessModal message="Berhasil masuk, mengalihkan ke dashboard..." />}
     </form>

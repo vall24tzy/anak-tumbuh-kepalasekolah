@@ -1,49 +1,69 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
-import {
-  validateTeacherImport,
-  commitTeacherImport,
-  resetTeacherImportWizard,
-  fetchTeachers,
-} from "@/redux/features/teacher/teacherSlice";
+import { importTeachers, resetTeacherImportWizard } from "@/redux/features/teacher/teacherSlice";
+import { downloadTeacherImportTemplateApi } from "@/lib/api/teacherApi";
+import { saveBlob } from "@/lib/utils/download";
+import { IMPORT_MAX_ROWS, validateImportFile } from "@/lib/utils/importFile";
+import { isMockEnabled } from "@/lib/utils/mock";
 import FileInput from "@/components/ui/File/FileInput";
 import PrimaryButton from "@/components/ui/Button/PrimaryButton";
 import ErrorAlert from "@/components/ui/Alert/ErrorAlert";
 import BaseModal from "@/components/ui/Modal/BaseModal";
-import ImportTeacherPreviewTable from "@/components/features/teacher/ImportTeacherPreviewTable";
 
 type ImportTeacherWizardProps = {
   onClose: () => void;
 };
 
+// Import SATU langkah: begitu "Import" ditekan, backend langsung memproses
+// file dan menyimpan baris yang valid (tidak ada layar preview/validasi).
 function ImportTeacherWizard({ onClose }: ImportTeacherWizardProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const {
-    importStep,
-    importLoading,
-    importError,
-    importRows,
-    importValidCount,
-    importInvalidCount,
-    importedCount,
-  } = useSelector((state: RootState) => state.teacher);
+  const { importLoading, importError, importResult } = useSelector(
+    (state: RootState) => state.teacher
+  );
+
+  const fileRef = useRef<File | null>(null);
+  const [hasFile, setHasFile] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [templateLoading, setTemplateLoading] = useState(false);
 
   const handleClose = () => {
+    fileRef.current = null;
     dispatch(resetTeacherImportWizard());
     onClose();
   };
 
   const handleFileSelect = (file: File) => {
-    dispatch(validateTeacherImport(file));
+    const problem = validateImportFile(file);
+    if (problem) {
+      fileRef.current = null;
+      setHasFile(false);
+      setTemplateError(problem);
+      return;
+    }
+    setTemplateError(null);
+    fileRef.current = file;
+    setHasFile(true);
   };
 
-  const handleCommit = async () => {
-    const result = await dispatch(commitTeacherImport(importRows));
-    if (commitTeacherImport.fulfilled.match(result) && result.payload.code === 200) {
-      dispatch(fetchTeachers());
+  const handleImport = () => {
+    if (fileRef.current) dispatch(importTeachers(fileRef.current));
+  };
+
+  const handleDownloadTemplate = async () => {
+    setTemplateError(null);
+    setTemplateLoading(true);
+    const result = await downloadTeacherImportTemplateApi();
+    setTemplateLoading(false);
+
+    if (!result.ok) {
+      setTemplateError(result.error.message);
+      return;
     }
+    saveBlob(result.data.blob, result.data.filename ?? "template_import_guru.xlsx");
   };
 
   return (
@@ -54,44 +74,77 @@ function ImportTeacherWizard({ onClose }: ImportTeacherWizardProps) {
       size="lg"
     >
       {importError && <ErrorAlert message={importError} />}
+      {templateError && <ErrorAlert message={templateError} onClose={() => setTemplateError(null)} />}
 
-      {importStep === "idle" && <FileInput onFileSelect={handleFileSelect} />}
+      {!importResult && (
+        <div className="space-y-3">
+          <FileInput
+            accept=".xlsx"
+            description={`Format .xlsx (kolom: Nama Lengkap, NIP, Gender), maksimal 5 MB dan ${IMPORT_MAX_ROWS} baris per file. File yang lebih besar harus dipecah.`}
+            onFileSelect={handleFileSelect}
+          />
 
-      {importLoading && importStep === "idle" && (
-        <p className="mt-4 text-center text-xs font-bold text-primary-500">Memvalidasi file...</p>
-      )}
+          {!isMockEnabled() && (
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              disabled={templateLoading}
+              className="w-full rounded-xl border border-primary-200 px-4 py-2.5 text-xs font-black text-primary-900 transition hover:bg-primary-50 disabled:opacity-50"
+            >
+              {templateLoading ? "Mengunduh..." : "Unduh Template Excel"}
+            </button>
+          )}
 
-      {importStep === "preview" && (
-        <div className="space-y-4">
-          <p className="text-xs font-bold text-primary-900/60">
-            {importRows.length} baris · {importValidCount} valid · {importInvalidCount} error
+          <p className="text-center text-xs font-semibold text-primary-900/55">
+            File langsung diproses saat kamu menekan Import. Baris yang valid tersimpan, baris
+            yang bermasalah dilaporkan setelahnya. Akun login guru dibuat otomatis (username dan
+            password awal = NIP).
           </p>
-          <ImportTeacherPreviewTable rows={importRows} />
+
           <PrimaryButton
             type="button"
             isLoading={importLoading}
-            disabled={importInvalidCount > 0 || importValidCount === 0}
-            onClick={handleCommit}
+            disabled={!hasFile}
+            onClick={handleImport}
           >
-            Import {importValidCount} Guru Valid
+            Import Guru
           </PrimaryButton>
-          {importInvalidCount > 0 && (
-            <p className="text-center text-xs font-semibold text-red-600">
-              Perbaiki baris error pada file lalu upload ulang.
-            </p>
-          )}
         </div>
       )}
 
-      {importStep === "done" && (
-        <div className="py-6 text-center">
+      {importResult && (
+        <div className="py-4 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
             <span className="text-2xl">✓</span>
           </div>
-          <h3 className="mt-4 text-lg font-black text-primary-900">Import berhasil</h3>
+          <h3 className="mt-4 text-lg font-black text-primary-900">Import selesai</h3>
           <p className="mt-2 text-sm font-semibold text-primary-900/60">
-            {importedCount} guru berhasil ditambahkan.
+            {importResult.successful_rows} dari {importResult.total_rows} baris berhasil
+            ditambahkan
+            {importResult.rejected_rows > 0 ? `, ${importResult.rejected_rows} baris ditolak.` : "."}
           </p>
+
+          {importResult.errors.length > 0 && (
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-red-100 text-left">
+              <table className="w-full min-w-[420px] text-xs">
+                <thead className="bg-red-50 text-red-700">
+                  <tr>
+                    <th className="px-3 py-3 font-bold">Baris</th>
+                    <th className="px-3 py-3 font-bold">Alasan ditolak</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-red-50">
+                  {importResult.errors.map((error) => (
+                    <tr key={`${error.row}-${error.code}-${error.field ?? ""}`}>
+                      <td className="px-3 py-3 font-black text-primary-900">{error.row}</td>
+                      <td className="px-3 py-3 text-red-600">{error.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleClose}

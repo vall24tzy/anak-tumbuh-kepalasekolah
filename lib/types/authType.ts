@@ -1,15 +1,24 @@
 import { User } from "@/lib/types/userType";
 
-// Payload login Kepala Sekolah: username berisi NIP, password berisi NIP.
+// Payload login staf. Kepala Sekolah: username = NIP.
 export type LoginPayload = {
   username: string;
   password: string;
 };
 
-export type AuthApiResponse = {
-  code: number;
-  status: string;
-  message: string;
-  data: User | null;
+// data dari POST /auth/login/staff
+export type LoginApiData = {
   access_token: string;
+  token_type: string;
+  user: {
+    id: number;
+    role: string;
+    name: string | null;
+  };
+};
+
+// Hasil login lengkap (token + user dari /auth/me).
+export type AuthSession = {
+  access_token: string;
+  user: User;
 };

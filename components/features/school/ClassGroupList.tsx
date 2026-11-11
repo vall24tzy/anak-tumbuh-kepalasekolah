@@ -1,24 +1,28 @@
 import { AcademicYear, ClassGroup } from "@/lib/types/schoolType";
+import { gradeLevelToLabel } from "@/lib/utils/mappers";
 
 type ClassGroupListProps = {
   academicYears: AcademicYear[];
   classGroups: ClassGroup[];
+  busy: boolean;
   onEdit: (classGroup: ClassGroup) => void;
+  onDelete: (classGroup: ClassGroup) => void;
 };
 
-function ClassGroupList({ academicYears, classGroups, onEdit }: ClassGroupListProps) {
+function ClassGroupList({ academicYears, classGroups, busy, onEdit, onDelete }: ClassGroupListProps) {
   const getYearName = (academicYearId: number) =>
     academicYears.find((year) => year.id === academicYearId)?.name ?? "—";
 
   return (
     <div className="overflow-x-auto rounded-3xl border border-primary-100 bg-white shadow-sm">
-      <table className="w-full min-w-[640px] text-left text-sm">
+      <table className="w-full min-w-[720px] text-left text-sm">
         <thead className="bg-primary-50 text-primary-900/60">
           <tr>
             <th className="px-5 py-3 font-bold">Tahun Ajaran</th>
             <th className="px-5 py-3 font-bold">Tingkat</th>
             <th className="px-5 py-3 font-bold">Rombel</th>
             <th className="px-5 py-3 font-bold">Wali Kelas</th>
+            <th className="px-5 py-3 font-bold">Siswa</th>
             <th className="px-5 py-3 font-bold">Aksi</th>
           </tr>
         </thead>
@@ -27,7 +31,7 @@ function ClassGroupList({ academicYears, classGroups, onEdit }: ClassGroupListPr
             <tr key={classGroup.id} className="hover:bg-primary-50/50">
               <td className="px-5 py-4 text-primary-900">{getYearName(classGroup.academic_year_id)}</td>
               <td className="px-5 py-4 font-extrabold text-primary-900">
-                {classGroup.education_level}
+                {gradeLevelToLabel(classGroup.grade_level)}
               </td>
               <td className="px-5 py-4 text-primary-900">{classGroup.name}</td>
               <td className="px-5 py-4">
@@ -35,14 +39,25 @@ function ClassGroupList({ academicYears, classGroups, onEdit }: ClassGroupListPr
                   <span className="text-primary-900/40">Belum ditetapkan</span>
                 )}
               </td>
+              <td className="px-5 py-4 text-primary-900">{classGroup.total_students ?? "—"}</td>
               <td className="px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() => onEdit(classGroup)}
-                  className="text-xs font-black text-primary-500 hover:underline"
-                >
-                  Edit
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(classGroup)}
+                    className="text-xs font-black text-primary-500 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(classGroup)}
+                    disabled={busy}
+                    className="text-xs font-black text-red-500 hover:underline disabled:opacity-50"
+                  >
+                    Hapus
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

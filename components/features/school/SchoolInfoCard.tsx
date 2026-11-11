@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CiHome, CiEdit } from "react-icons/ci";
 import { School } from "@/lib/types/schoolType";
+import { isMockEnabled } from "@/lib/utils/mock";
 import StatusBadge from "@/components/ui/Badge/StatusBadge";
 import EditSchoolModal from "@/components/features/school/EditSchoolModal";
 
@@ -40,14 +41,17 @@ function SchoolInfoCard({ school }: SchoolInfoCardProps) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsEditOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary-200 bg-white px-4 py-3 text-sm font-black text-primary-900 transition hover:bg-primary-50"
-        >
-          <CiEdit size={18} />
-          Edit Sekolah
-        </button>
+        {/* Belum ada endpoint edit sekolah di backend: tombol hanya tampil di mode dummy. */}
+        {isMockEnabled() && (
+          <button
+            type="button"
+            onClick={() => setIsEditOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary-200 bg-white px-4 py-3 text-sm font-black text-primary-900 transition hover:bg-primary-50"
+          >
+            <CiEdit size={18} />
+            Edit Sekolah
+          </button>
+        )}
       </div>
 
       {isEditOpen && <EditSchoolModal school={school} onClose={() => setIsEditOpen(false)} />}

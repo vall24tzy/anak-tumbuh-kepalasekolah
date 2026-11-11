@@ -1,18 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { CiUser, CiRedo, CiImport, CiCirclePlus } from "react-icons/ci";
-import { AppDispatch } from "@/redux/store";
+import { AppDispatch, RootState } from "@/redux/store";
 import useTeachers from "@/hook/useTeachers";
 import useSearchFilter from "@/hook/useSearchFilter";
-import { deleteTeacher, fetchTeachers } from "@/redux/features/teacher/teacherSlice";
+import {
+  clearSaveFeedback,
+  fetchTeachers,
+  inactiveTeacher,
+} from "@/redux/features/teacher/teacherSlice";
 import { Teacher } from "@/lib/types/teacherType";
+import { gradeLevelToLabel } from "@/lib/utils/mappers";
 import SearchInput from "@/components/ui/Search/SearchInput";
 import TeacherTable from "@/components/features/teacher/TeacherTable";
 import EditTeacherModal from "@/components/features/teacher/EditTeacherModal";
 import AddTeacherModal from "@/components/features/teacher/AddTeacherModal";
 import ImportTeacherWizard from "@/components/features/teacher/ImportTeacherWizard";
+import ResetTeacherPasswordModal from "@/components/features/teacher/ResetTeacherPasswordModal";
+import FeedbackBanner from "@/components/ui/Alert/FeedbackBanner";
 import SpinLoader from "@/components/ui/Loader/SpinLoader";
 import ErrorAlert from "@/components/ui/Alert/ErrorAlert";
 
@@ -20,24 +27,33 @@ const getTeacherSearchText = (teacher: Teacher) => [
   teacher.name,
   teacher.nip,
   teacher.class_group_name ?? "",
+  teacher.grade_level ? gradeLevelToLabel(teacher.grade_level) : "",
 ];
 
 function TeacherManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [resetTarget, setResetTarget] = useState<Teacher | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   const { teachers, loading, error } = useTeachers();
+  const { saving, saveMessage, saveWarning, saveError } = useSelector(
+    (state: RootState) => state.teacher
+  );
+  const isModalOpen = isAddOpen || isImportOpen || Boolean(editingTeacher) || Boolean(resetTarget);
   const { query, setQuery, filteredItems: filteredTeachers } = useSearchFilter(
     teachers,
     getTeacherSearchText
   );
 
-  const handleDelete = async (teacher: Teacher) => {
-    const confirmed = window.confirm(`Hapus guru ${teacher.name}? Data akun guru ini akan dihapus.`);
+  const handleDeactivate = async (teacher: Teacher) => {
+    const confirmed = window.confirm(
+      `Nonaktifkan guru ${teacher.name}?\n\nSemua penugasan wali kelas aktifnya akan ditutup dan guru tidak bisa login lagi. Tindakan ini TIDAK BISA dibatalkan: guru yang sudah nonaktif tidak dapat diaktifkan kembali. Data guru tetap tersimpan (tidak dihapus).`
+    );
     if (!confirmed) return;
-    await dispatch(deleteTeacher(teacher.id));
+    dispatch(clearSaveFeedback());
+    await dispatch(inactiveTeacher(teacher.id));
   };
 
   return (
@@ -52,8 +68,8 @@ function TeacherManagement() {
             Guru &amp; Wali Kelas
           </h1>
           <p className="mt-1 max-w-xl text-sm font-semibold text-primary-900/55">
-            Username dan password digenerate otomatis. Kepala Sekolah dapat mengelola penempatan
-            guru ke rombel.
+            Akun login dibuat otomatis (username dan password awal = NIP). Kepala Sekolah dapat
+            mengelola penempatan guru ke rombel.
           </p>
         </div>
 
@@ -96,6 +112,13 @@ function TeacherManagement() {
         </span>
       </div>
 
+      <FeedbackBanner
+        message={saveMessage}
+        warning={saveWarning}
+        error={isModalOpen ? null : saveError}
+        onClose={() => dispatch(clearSaveFeedback())}
+      />
+
       {error && <ErrorAlert message={error} />}
 
       {loading ? (
@@ -103,12 +126,21 @@ function TeacherManagement() {
           <SpinLoader size={48} />
         </div>
       ) : (
-        <TeacherTable teachers={filteredTeachers} onEdit={setEditingTeacher} onDelete={handleDelete} />
+        <TeacherTable
+          teachers={filteredTeachers}
+          busy={saving}
+          onEdit={setEditingTeacher}
+          onResetPassword={setResetTarget}
+          onDeactivate={handleDeactivate}
+        />
       )}
 
       {isAddOpen && <AddTeacherModal onClose={() => setIsAddOpen(false)} />}
       {isImportOpen && <ImportTeacherWizard onClose={() => setIsImportOpen(false)} />}
       {editingTeacher && <EditTeacherModal teacher={editingTeacher} onClose={() => setEditingTeacher(null)} />}
+      {resetTarget && (
+        <ResetTeacherPasswordModal teacher={resetTarget} onClose={() => setResetTarget(null)} />
+      )}
     </div>
   );
 }

@@ -14,10 +14,14 @@ const initialState: DashboardState = {
   error: null,
 };
 
-export const fetchDashboardSummary = createAsyncThunk("dashboard/fetchSummary", async () => {
-  const response = await getDashboardSummaryApi();
-  return response;
-});
+export const fetchDashboardSummary = createAsyncThunk<DashboardSummary, void, { rejectValue: string }>(
+  "dashboard/fetchSummary",
+  async (_, { rejectWithValue }) => {
+    const result = await getDashboardSummaryApi();
+    if (!result.ok) return rejectWithValue(result.error.message);
+    return result.data;
+  }
+);
 
 const dashboardSlice = createSlice({
   name: "dashboard",
@@ -31,15 +35,11 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboardSummary.fulfilled, (state, action) => {
         state.loading = false;
-        if (action.payload.code === 200 && action.payload.data) {
-          state.summary = action.payload.data;
-        } else {
-          state.error = action.payload.message || "Gagal memuat ringkasan dashboard";
-        }
+        state.summary = action.payload;
       })
       .addCase(fetchDashboardSummary.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || "Gagal memuat ringkasan dashboard";
+        state.error = action.payload ?? action.error.message ?? "Gagal memuat ringkasan dashboard";
       });
   },
 });

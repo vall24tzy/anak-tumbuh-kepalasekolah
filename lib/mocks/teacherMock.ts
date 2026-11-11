@@ -1,30 +1,42 @@
 import { Teacher } from "@/lib/types/teacherType";
 
+// Array ini sengaja bisa berubah (let-semantik): mutasi mock di teacherApi /
+// schoolApi memperbarui isinya supaya tampilan tetap konsisten di mode dummy.
 export const mockTeachers: Teacher[] = [
   {
     id: 1,
-    uuid: "mock-teacher-1",
     name: "Siti Nurhaliza, S.Pd",
     nip: "198901012020012001",
-    username: "198901012020012001",
-    password: "198901012020012001",
+    gender: "perempuan",
+    status: "active",
+    assignment_id: 1,
     class_group_id: 1,
     class_group_name: "Cendekia",
-    education_level: "Kelas 5",
-    total_students: 26,
-    status: "active",
+    grade_level: 5,
+    academic_year_id: 1,
   },
   {
     id: 2,
-    uuid: "mock-teacher-2",
     name: "Rina Lestari, S.Pd",
     nip: "199203152021032002",
-    username: "199203152021032002",
-    password: "199203152021032002",
+    gender: "perempuan",
+    status: "active",
+    assignment_id: 2,
     class_group_id: 2,
     class_group_name: "B",
-    education_level: "Kelas 8",
-    total_students: 24,
+    grade_level: 8,
+    academic_year_id: 1,
+  },
+  {
+    id: 3,
+    name: "Budi Santoso, S.Pd",
+    nip: "198505202015041003",
+    gender: "laki-laki",
     status: "active",
+    assignment_id: null,
+    class_group_id: null,
+    class_group_name: null,
+    grade_level: null,
+    academic_year_id: null,
   },
 ];

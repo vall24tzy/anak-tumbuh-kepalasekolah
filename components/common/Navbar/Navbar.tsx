@@ -33,7 +33,7 @@ function Navbar({ onOpenSidebar }: NavbarProps) {
       <div className="flex items-center gap-3">
         <div className="hidden rounded-xl bg-primary-50 px-3 py-2 text-right sm:block">
           <p className="text-xs font-extrabold text-primary-900">{user?.name ?? "Kepala Sekolah"}</p>
-          <p className="text-[10px] text-primary-900/50">{user?.username}</p>
+          <p className="text-[10px] text-primary-900/50">{user?.nip}</p>
         </div>
         <LogoutButton />
       </div>

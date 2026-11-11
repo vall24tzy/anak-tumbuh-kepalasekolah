@@ -1,33 +1,36 @@
-// Struktur Sekolah sesuai dokumen bag. 3: Sekolah -> Tahun Ajaran -> Kelas/Rombel.
-// Rombel bersifat fleksibel (SD: 1-6/1-A/nama khusus, TK: TK A/TK B/dst).
+// Struktur Sekolah: Sekolah -> Tahun Ajaran -> Kelas/Rombel.
+// Sumber backend: GET /auth/me (sekolah), GET /academic-years, GET /rombels,
+// GET /teacher-class-assignments dan GET /teachers (nama wali kelas).
 export type School = {
   id: number;
-  uuid: string;
   name: string;
+  // Backend belum menyediakan alamat/status sekolah; diisi default di mapper.
   address: string | null;
   status: "active" | "inactive";
 };
 
-export type AcademicYearStatus = "active" | "inactive";
-
 export type AcademicYear = {
   id: number;
-  uuid: string;
   name: string; // contoh: "2026/2027"
   start_date: string;
   end_date: string;
-  status: AcademicYearStatus;
+  is_active: boolean;
 };
 
+// Rombel = kelas. Tingkat disimpan backend sebagai angka (grade_level) dan
+// ditampilkan "Kelas {n}" lewat gradeLevelToLabel().
 export type ClassGroup = {
   id: number;
-  uuid: string;
   academic_year_id: number;
-  education_level: string; // "Kelas 1" / "TK A"
+  grade_level: number;
   name: string; // "1-A" / "Melati"
+  // Penugasan wali kelas AKTIF pada rombel ini (null = belum ditugaskan).
+  assignment_id: number | null;
   homeroom_teacher_id: number | null;
   homeroom_teacher_name: string | null;
-  total_students: number;
+  // Jumlah siswa aktif. Backend hanya menghitungnya untuk rombel pada tahun
+  // ajaran aktif; null = tidak tersedia.
+  total_students: number | null;
 };
 
 export type SchoolStructureData = {
@@ -36,58 +39,29 @@ export type SchoolStructureData = {
   class_groups: ClassGroup[];
 };
 
-export type SchoolStructureResponse = {
-  code: number;
-  status: string;
-  message: string;
-  data: SchoolStructureData | null;
-};
-
-// Edit info sekolah
-export type EditSchoolPayload = {
-  name: string;
-};
-
-export type EditSchoolResponse = {
-  code: number;
-  status: string;
-  message: string;
-  data: School | null;
-};
-
-// Tambah Tahun Ajaran baru
-export type AddAcademicYearPayload = {
+// Tambah / ubah Tahun Ajaran
+export type AcademicYearPayload = {
   name: string;
   start_date: string;
   end_date: string;
 };
 
-export type AddAcademicYearResponse = {
-  code: number;
-  status: string;
-  message: string;
-  data: AcademicYear | null;
-};
-
-// Tambah Kelas/Rombel baru. Nama tingkat & rombel bebas (tidak di-hard-code),
-// validasi scope & constraint 1 Wali Kelas/1 rombel aktif ditentukan backend.
-export type AddClassGroupPayload = {
+// Tambah / ubah Rombel. Wali kelas ditetapkan lewat penugasan terpisah.
+export type ClassGroupPayload = {
   academic_year_id: number;
-  education_level: string;
+  grade_level: number;
   name: string;
   homeroom_teacher_id: number | null;
 };
 
-export type AddClassGroupResponse = {
-  code: number;
-  status: string;
-  message: string;
-  data: ClassGroup | null;
-};
-
-// Edit Kelas/Rombel yang sudah ada (terutama ganti Wali Kelas)
-export type UpdateClassGroupPayload = AddClassGroupPayload & {
+export type UpdateClassGroupPayload = ClassGroupPayload & {
   id: number;
+  // Penugasan aktif sebelum diubah (untuk menentukan perubahan wali kelas).
+  current_assignment_id: number | null;
+  current_teacher_id: number | null;
 };
 
-export type UpdateClassGroupResponse = AddClassGroupResponse;
+// Edit nama sekolah belum didukung backend (hanya mode data dummy).
+export type EditSchoolPayload = {
+  name: string;
+};

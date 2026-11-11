@@ -1,18 +1,24 @@
 "use client";
 
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useState } from "react";
 import { CiHome, CiRedo, CiCalendar, CiBoxList, CiCirclePlus } from "react-icons/ci";
-import { AppDispatch } from "@/redux/store";
-import { ClassGroup } from "@/lib/types/schoolType";
+import { AppDispatch, RootState } from "@/redux/store";
+import { AcademicYear, ClassGroup } from "@/lib/types/schoolType";
 import useSchoolStructure from "@/hook/useSchoolStructure";
-import { fetchSchoolStructure } from "@/redux/features/school/schoolSlice";
+import {
+  activateAcademicYear,
+  clearSaveFeedback,
+  deleteClassGroup,
+  fetchSchoolStructure,
+} from "@/redux/features/school/schoolSlice";
 import SchoolInfoCard from "@/components/features/school/SchoolInfoCard";
 import AcademicYearTable from "@/components/features/school/AcademicYearTable";
 import AddAcademicYearModal from "@/components/features/school/AddAcademicYearModal";
 import ClassGroupList from "@/components/features/school/ClassGroupList";
 import AddClassGroupModal from "@/components/features/school/AddClassGroupModal";
 import AsyncState from "@/components/ui/State/AsyncState";
+import FeedbackBanner from "@/components/ui/Alert/FeedbackBanner";
 
 type SchoolTab = "years" | "classes";
 
@@ -21,9 +27,33 @@ function SchoolStructure() {
   const [isAddYearOpen, setIsAddYearOpen] = useState(false);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [editingClassGroup, setEditingClassGroup] = useState<ClassGroup | null>(null);
+  const [editingYear, setEditingYear] = useState<AcademicYear | null>(null);
 
   const dispatch = useDispatch<AppDispatch>();
   const { structure, loading, error } = useSchoolStructure();
+  const { saving, saveMessage, saveWarning, saveError } = useSelector(
+    (state: RootState) => state.school
+  );
+
+  const isModalOpen = isAddYearOpen || isAddClassOpen || Boolean(editingClassGroup) || Boolean(editingYear);
+
+  const handleActivateYear = async (year: AcademicYear) => {
+    const confirmed = window.confirm(
+      `Aktifkan tahun ajaran ${year.name}? Tahun ajaran yang sedang aktif akan dinonaktifkan.`
+    );
+    if (!confirmed) return;
+    dispatch(clearSaveFeedback());
+    await dispatch(activateAcademicYear(year.id));
+  };
+
+  const handleDeleteClassGroup = async (classGroup: ClassGroup) => {
+    const confirmed = window.confirm(
+      `Hapus rombel ${classGroup.name}? Rombel yang masih punya wali kelas atau siswa tidak bisa dihapus.`
+    );
+    if (!confirmed) return;
+    dispatch(clearSaveFeedback());
+    await dispatch(deleteClassGroup(classGroup.id));
+  };
 
   return (
     <AsyncState loading={loading} error={error}>
@@ -39,8 +69,7 @@ function SchoolStructure() {
             Sekolah &amp; Tahun Ajaran
           </h1>
           <p className="mt-1 max-w-xl text-sm font-semibold text-primary-900/55">
-            Kelola konteks sekolah dan tahun ajaran. Struktur tingkat/rombel mengikuti data yang
-            tersedia dari backend.
+            Kelola tahun ajaran dan kelas/rombel sekolahmu, termasuk penugasan wali kelas.
           </p>
         </div>
 
@@ -53,6 +82,13 @@ function SchoolStructure() {
           Refresh
         </button>
       </div>
+
+      <FeedbackBanner
+        message={saveMessage}
+        warning={saveWarning}
+        error={isModalOpen ? null : saveError}
+        onClose={() => dispatch(clearSaveFeedback())}
+      />
 
       <SchoolInfoCard school={structure.school} />
 
@@ -91,7 +127,7 @@ function SchoolStructure() {
                 <div>
                   <p className="text-sm font-black text-primary-900">Tahun Ajaran</p>
                   <p className="mt-1 text-xs font-semibold text-primary-900/55">
-                    Enrollment baru menggunakan konteks tahun ajaran tanpa menghapus histori lama.
+                    Hanya satu tahun ajaran yang aktif. Mengaktifkan tahun ajaran lain menonaktifkan yang sekarang.
                   </p>
                 </div>
                 <button
@@ -104,7 +140,12 @@ function SchoolStructure() {
                 </button>
               </div>
 
-              <AcademicYearTable academicYears={structure.academic_years} />
+              <AcademicYearTable
+                academicYears={structure.academic_years}
+                busy={saving}
+                onEdit={setEditingYear}
+                onActivate={handleActivateYear}
+              />
             </div>
           )}
 
@@ -112,10 +153,10 @@ function SchoolStructure() {
             <div className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm font-black text-primary-900">Skeleton Kelas / Rombel</p>
+                  <p className="text-sm font-black text-primary-900">Kelas / Rombel</p>
                   <p className="mt-1 text-xs font-semibold text-primary-900/55">
-                    Nama tingkat dan rombel tidak di-hard-code; backend tetap menentukan validasi
-                    scope dan assignment Wali Kelas.
+                    Tingkat berupa angka (mis. 5 untuk Kelas 5). Satu rombel hanya punya satu wali kelas
+                    aktif pada satu tahun ajaran.
                   </p>
                 </div>
                 <button
@@ -131,7 +172,9 @@ function SchoolStructure() {
               <ClassGroupList
                 academicYears={structure.academic_years}
                 classGroups={structure.class_groups}
+                busy={saving}
                 onEdit={setEditingClassGroup}
+                onDelete={handleDeleteClassGroup}
               />
             </div>
           )}
@@ -139,6 +182,9 @@ function SchoolStructure() {
       </div>
 
       {isAddYearOpen && <AddAcademicYearModal onClose={() => setIsAddYearOpen(false)} />}
+      {editingYear && (
+        <AddAcademicYearModal academicYear={editingYear} onClose={() => setEditingYear(null)} />
+      )}
       {isAddClassOpen && (
         <AddClassGroupModal
           schoolName={structure.school.name}

@@ -16,7 +16,7 @@ function AcademicYearSection({ academicYear, classGroups }: AcademicYearSectionP
           <CiCalendar size={20} className="text-primary-500" />
           <p className="text-sm font-black text-primary-900">Tahun Ajaran {academicYear.name}</p>
         </div>
-        {academicYear.status === "active" ? (
+        {academicYear.is_active ? (
           <StatusBadge label="Aktif" tone="success" />
         ) : (
           <StatusBadge label="Nonaktif" tone="muted" />

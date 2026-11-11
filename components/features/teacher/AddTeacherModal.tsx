@@ -3,8 +3,10 @@
 import { FormEvent, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
-import { addTeacher, resetAddTeacherStatus } from "@/redux/features/teacher/teacherSlice";
+import { addTeacher, clearSaveFeedback } from "@/redux/features/teacher/teacherSlice";
 import useSchoolStructure from "@/hook/useSchoolStructure";
+import { TeacherGender } from "@/lib/types/teacherType";
+import { gradeLevelToLabel } from "@/lib/utils/mappers";
 import TextInput from "@/components/ui/Input/TextInput";
 import SelectInput from "@/components/ui/Input/SelectInput";
 import PrimaryButton from "@/components/ui/Button/PrimaryButton";
@@ -18,29 +20,39 @@ type AddTeacherModalProps = {
 function AddTeacherModal({ onClose }: AddTeacherModalProps) {
   const [name, setName] = useState("");
   const [nip, setNip] = useState("");
+  const [gender, setGender] = useState<TeacherGender>("laki-laki");
   const [classGroupId, setClassGroupId] = useState("");
 
   const { structure } = useSchoolStructure();
   const dispatch = useDispatch<AppDispatch>();
-  const { addLoading, addError } = useSelector((state: RootState) => state.teacher);
+  const { saving, saveError } = useSelector((state: RootState) => state.teacher);
+
+  // Penempatan hanya ke rombel tahun ajaran aktif yang belum punya wali kelas.
+  const activeYearId = structure?.academic_years.find((year) => year.is_active)?.id;
+  const availableGroups = (structure?.class_groups ?? []).filter(
+    (group) => group.academic_year_id === activeYearId && !group.homeroom_teacher_id
+  );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    dispatch(resetAddTeacherStatus());
+    dispatch(clearSaveFeedback());
 
     const result = await dispatch(
-      addTeacher({ name, nip, class_group_id: classGroupId ? Number(classGroupId) : null })
+      addTeacher({
+        name: name.trim(),
+        nip: nip.trim(),
+        gender,
+        class_group_id: classGroupId ? Number(classGroupId) : null,
+      })
     );
 
-    if (addTeacher.fulfilled.match(result) && result.payload.code === 200) {
-      onClose();
-    }
+    if (addTeacher.fulfilled.match(result)) onClose();
   };
 
   return (
     <BaseModal
       title="Tambah Guru"
-      subtitle="Username dan password akan menggunakan NIP / ID guru yang kamu masukkan."
+      subtitle="Akun login dibuat otomatis: username dan password awal = NIP."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -49,6 +61,7 @@ function AddTeacherModal({ onClose }: AddTeacherModalProps) {
           name="name"
           type="text"
           placeholder="Nama lengkap guru"
+          maxLength={150}
           required
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -60,9 +73,22 @@ function AddTeacherModal({ onClose }: AddTeacherModalProps) {
           type="text"
           inputMode="numeric"
           placeholder="Masukkan NIP / ID guru"
+          maxLength={30}
           required
           value={nip}
           onChange={(event) => setNip(event.target.value)}
+        />
+
+        <SelectInput
+          label="Jenis Kelamin"
+          name="gender"
+          required
+          value={gender}
+          onChange={(event) => setGender(event.target.value as TeacherGender)}
+          options={[
+            { label: "Laki-laki", value: "laki-laki" },
+            { label: "Perempuan", value: "perempuan" },
+          ]}
         />
 
         <SelectInput
@@ -72,18 +98,16 @@ function AddTeacherModal({ onClose }: AddTeacherModalProps) {
           onChange={(event) => setClassGroupId(event.target.value)}
           options={[
             { label: "Belum ditugaskan", value: "" },
-            ...(structure?.class_groups ?? [])
-              .filter((group) => !group.homeroom_teacher_name)
-              .map((group) => ({
-                label: `${group.education_level} — ${group.name}`,
-                value: String(group.id),
-              })),
+            ...availableGroups.map((group) => ({
+              label: `${gradeLevelToLabel(group.grade_level)} — ${group.name}`,
+              value: String(group.id),
+            })),
           ]}
         />
 
-        {addError && <ErrorAlert message={addError} />}
+        {saveError && <ErrorAlert message={saveError} />}
 
-        <PrimaryButton isLoading={addLoading}>Tambah Guru</PrimaryButton>
+        <PrimaryButton isLoading={saving}>Tambah Guru</PrimaryButton>
       </form>
     </BaseModal>
   );

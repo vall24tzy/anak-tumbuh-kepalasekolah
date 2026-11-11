@@ -5,10 +5,3 @@ export type DashboardSummary = {
   total_teachers: number;
   total_students: number;
 };
-
-export type DashboardSummaryResponse = {
-  code: number;
-  status: string;
-  message: string;
-  data: DashboardSummary | null;
-};

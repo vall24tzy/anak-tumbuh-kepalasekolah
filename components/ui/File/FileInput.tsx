@@ -5,10 +5,15 @@ import { CiFileOn } from "react-icons/ci";
 
 type FileInputProps = {
   accept?: string;
+  description?: string;
   onFileSelect: (file: File) => void;
 };
 
-function FileInput({ accept = ".xlsx,.csv", onFileSelect }: FileInputProps) {
+function FileInput({
+  accept = ".xlsx",
+  description = "Format .xlsx sesuai template Excel Import Guru",
+  onFileSelect,
+}: FileInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -24,7 +29,7 @@ function FileInput({ accept = ".xlsx,.csv", onFileSelect }: FileInputProps) {
       <CiFileOn size={40} className="mx-auto text-primary-500" />
       <p className="mt-3 text-sm font-extrabold text-primary-900">Upload data guru</p>
       <p className="mt-1 text-xs font-semibold text-primary-900/55">
-        Format .xlsx atau .csv sesuai template Excel Import Guru
+        {description}
       </p>
       <button
         type="button"

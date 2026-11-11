@@ -3,9 +3,12 @@ import StatusBadge from "@/components/ui/Badge/StatusBadge";
 
 type AcademicYearTableProps = {
   academicYears: AcademicYear[];
+  busy: boolean;
+  onEdit: (year: AcademicYear) => void;
+  onActivate: (year: AcademicYear) => void;
 };
 
-function AcademicYearTable({ academicYears }: AcademicYearTableProps) {
+function AcademicYearTable({ academicYears, busy, onEdit, onActivate }: AcademicYearTableProps) {
   return (
     <div className="overflow-x-auto rounded-3xl border border-primary-100 bg-white shadow-sm">
       <table className="w-full min-w-[560px] text-left text-sm">
@@ -25,13 +28,33 @@ function AcademicYearTable({ academicYears }: AcademicYearTableProps) {
               <td className="px-5 py-4 text-primary-900">{year.start_date}</td>
               <td className="px-5 py-4 text-primary-900">{year.end_date}</td>
               <td className="px-5 py-4">
-                {year.status === "active" ? (
+                {year.is_active ? (
                   <StatusBadge label="Aktif" tone="success" />
                 ) : (
                   <StatusBadge label="Nonaktif" tone="muted" />
                 )}
               </td>
-              <td className="px-5 py-4 text-xs font-semibold text-primary-900/40">—</td>
+              <td className="px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(year)}
+                    className="text-xs font-black text-primary-500 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  {!year.is_active && (
+                    <button
+                      type="button"
+                      onClick={() => onActivate(year)}
+                      disabled={busy}
+                      className="text-xs font-black text-emerald-600 hover:underline disabled:opacity-50"
+                    >
+                      Aktifkan
+                    </button>
+                  )}
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
