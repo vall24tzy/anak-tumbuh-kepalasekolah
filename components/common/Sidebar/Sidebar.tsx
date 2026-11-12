@@ -35,7 +35,7 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
             AT
           </span>
           <span className="text-lg font-black tracking-tight text-white">
-            anaktumbuh<span className="text-secondary-500">.id</span>
+            anakhebat<span className="text-secondary-500">.id</span>
           </span>
         </div>
 

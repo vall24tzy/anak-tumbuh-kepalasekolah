@@ -10,7 +10,7 @@ const urbanist = Urbanist({
 });
 
 export const metadata: Metadata = {
-  title: "ANAKTUMBUH.ID | Kepala Sekolah",
+  title: "ANAKHEBAT.ID | Kepala Sekolah",
   description: "Sistem Pemantauan 7 Kebiasaan Anak Indonesia Hebat",
 };
 

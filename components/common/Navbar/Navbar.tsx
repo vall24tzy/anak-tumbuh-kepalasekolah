@@ -24,7 +24,7 @@ function Navbar({ onOpenSidebar }: NavbarProps) {
         </button>
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-primary-500">
-            anaktumbuh.id
+            anakhebat.id
           </p>
           <p className="text-sm font-extrabold text-primary-900">Dashboard Kepala Sekolah</p>
         </div>

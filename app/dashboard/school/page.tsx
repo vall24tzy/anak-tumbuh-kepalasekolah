@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import SchoolStructure from "@/components/features/school/SchoolStructure";
 
 export const metadata: Metadata = {
-  title: "Sekolah | ANAKTUMBUH.ID Kepala Sekolah",
+  title: "Sekolah | ANAKHEBAT.ID Kepala Sekolah",
 };
 
 const Page = () => {

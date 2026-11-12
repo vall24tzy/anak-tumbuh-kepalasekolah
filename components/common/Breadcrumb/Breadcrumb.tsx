@@ -9,7 +9,7 @@ function Breadcrumb() {
 
   return (
     <p className="text-xs font-bold text-primary-900/45">
-      anaktumbuh.id <span className="mx-1">/</span>{" "}
+      anakhebat.id <span className="mx-1">/</span>{" "}
       <span className="text-primary-900">{activeItem?.label ?? "Dashboard"}</span>
     </p>
   );

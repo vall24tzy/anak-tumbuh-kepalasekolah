@@ -10,7 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-urbanist);
 
-  /* Primary = biru identitas ANAKTUMBUH.ID */
+  /* Primary = biru identitas ANAKHEBAT.ID */
   --color-primary-50: #eef5ff;
   --color-primary-100: #eaf2ff;
   --color-primary-200: #a4c1fd;
@@ -22,7 +22,7 @@
   --color-primary-800: #21458a;
   --color-primary-900: #232852;
 
-  /* Secondary = kuning aksen ANAKTUMBUH.ID */
+  /* Secondary = kuning aksen ANAKHEBAT.ID */
   --color-secondary-100: #fdf3da;
   --color-secondary-500: #eeb541;
 }
